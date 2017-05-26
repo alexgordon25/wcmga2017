@@ -1,0 +1,22 @@
+button,
+input[type="button"],
+input[type="reset"],
+input[type="submit"] {
+	border: 0;
+	border-radius: 0;
+	background: $color__background-button;
+	box-shadow: none;
+	@include font-size(0.75);
+	line-height: 1;
+	padding: .6em 1em .4em;
+	text-shadow: none;
+
+	&:hover {
+		box-shadow: none;
+	}
+
+	&:active,
+	&:focus {
+		box-shadow: none;
+	}
+}

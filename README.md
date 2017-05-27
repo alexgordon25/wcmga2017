@@ -1,6 +1,6 @@
 # Charlas y Talleres impartidos en el WordCamp Managua 2017
 
-- [Charla: Realzando tu admin panel de WordPress.](#realzando-tu-admin-panel-de-WordPress)
+- [Charla: Realzando tu admin panel de WordPress.](#realzando-tu-admin-panel-de-wordpress)
 - [Taller: Creando Temas Personalizados.](#creando-temas-personalizados)
 
 # Realzando tu admin panel de WordPress.

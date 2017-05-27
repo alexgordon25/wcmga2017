@@ -1,8 +1,283 @@
+# Charlas y Talleres impartidos en el WordCamp Managua 2017
+
+- [Charla: Realzando tu admin panel de WordPress.](#realzando-tu-admin-panel-de-WordPress)
+- [Taller: Creando Temas Personalizados.](#creando-temas-personalizados)
+
+# Realzando tu admin panel de WordPress.
+
+Los siguientes code snippets están basado en una charla impartida por [Amanda Giles](https://twitter.com/AmandaGilesNH) en el [WordCamp Miami 2017](https://2017.miami.wordcamp.org). Thank you Amanda for your blessings.
+
+## Presentación.
+
+- [realzando-admin-panel-managua2017.pdf](https://github.com/alexgordon25/wcmga2017/raw/master/presentacion/realzando-admin-panel-managua2017.pdf)
+
+## Agrega Estilos a tu pantalla de Login
+
+```
+<?php  
+//Custom CSS for login page
+function login_css() {
+    wp_enqueue_style('login-page', 
+         get_template_directory_uri() . '/css/login.css', false );
+}
+
+// Change logo link from wordpress.org to your site’s url
+function login_url() { return home_url(); }
+
+// Change the alt text on the logo to show your site’s name
+function login_title() { return get_option('blogname'); }
+
+// calling it only on the login page
+add_action( 'login_enqueue_scripts', 'login_css', 10 );
+add_filter( 'login_headerurl', 'login_url');
+add_filter( 'login_headertitle', 'login_title');
+?>
+```
+
+## Promociona tu persona / portafolio
+
+```
+<?php  
+// Custom Backend Footer
+function custom_admin_footer() { ?>
+
+<span id="footer-thankyou">
+Desarrollado por <a href="https://twitter.com/alexgordon25" target="_blank">Daniel Gordon</a>. Para cualquier asistencia en este sitio, por favor <a href="mailto:alexgordon25@gmail.com">escríbeme</a>.
+<span>
+
+<?php }
+
+// adding it to the admin area
+add_filter('admin_footer_text', 'custom_admin_footer');
+?>
+```
+*Los 2 snippets presentados pertenecesn a Eddie Machado’s* [Bones theme](http://themble.com/bones/)
+
+## Amplía la información de tus listados
+
+### Agrega columnas a tus listados
+
+```
+<?php 
+/* Adds new column headers to 'movies' post type */
+function movies_add_new_columns($columns)  {
+        //Remove irrelevant columns
+        unset($columns['author']);
+        unset($columns['comments']);
+        unset($columns['date']);
+    
+	$columns['release'] = 'Release Date';
+	return $columns;
+}
+add_filter('manage_edit-movies_columns', 'movies_add_new_columns');
+
+/* Adds content to new columns for 'movies' post type */
+function movies_manage_columns($column_name, $id) {
+	global $post;
+	switch ($column_name) {
+		case 'release':
+			echo get_post_meta( $post->ID , 'release-year' , true );
+			break;
+	} 
+}
+add_action('manage_movies_posts_custom_column', 'movies_manage_columns', 10, 2);
+?>
+```
+
+### Convierte esa información en clasificable/ordenable
+
+```
+<?php 
+/* Make new 'movies' columns sortable */
+function movies_columns_sortable($columns) {
+	$custom = array(
+		'release' => 'release',
+	);
+	return wp_parse_args($custom, $columns);
+}
+add_filter('manage_edit-movies_sortable_columns', 'movies_columns_sortable');
+
+/* Handle ordering for 'movies' columns */
+function movies_columns_orderby( $vars ) {
+     if ( isset( $vars['orderby'] ) ) {
+          if ( 'release' == $vars['release'] ) 
+	     $vars = array_merge( $vars, array(
+                    'orderby' => 'meta_value_num', 'meta_key' => 'release-year') );
+     }        
+     return $vars;
+}
+add_filter( 'request', 'movies_columns_orderby' );
+?>
+```
+
+### Agrega un filtro de taxonomía
+
+```
+<?php  
+/* Adds a filter in the Admin list pages on taxonomy for easier locating */
+function movie_genre_filter_admin_content() {
+    global $typenow;    
+    if( $typenow == "movies") { $taxonomies = array('genre'); }        
+    if (isset($taxonomies)) {
+        foreach ($taxonomies as $tax_slug) {
+            $tax_obj = get_taxonomy($tax_slug);
+            $tax_name = $tax_obj->labels->name;
+            $terms = get_terms($tax_slug);
+            echo "<select name='$tax_slug' id='$tax_slug' class='postform'>";
+            echo "<option value=''>Show All $tax_name</option>";
+            foreach ($terms as $term) { 
+                $label = (isset($_GET[$tax_slug])) ? $_GET[$tax_slug] : ''; 
+                echo '<option value='. $term->slug, 
+                        $label == $term->slug ? ' selected="selected"' : '','>' . 
+                        $term->name .'</option>';
+            }
+        }
+    }
+}
+add_action( 'restrict_manage_posts', 'movie_genre_filter_admin_content' );
+?>
+```
+
+## Agrega estilos a tu Content Editor
+
+```
+<?php   
+// Apply styles to content editor to make it match the site
+function add_custom_editor_style() {
+    //Looks for an 'editor-style.css' in your theme folder
+    add_editor_style();
+
+    //Or call it with a custom file name if you choose
+    //(helpful especially when keeping css in a subfolder)
+    //add_editor_style('css/my-editor-style.css');
+}
+add_action( 'admin_init', 'add_custom_editor_style' );
+?>
+```
+
+## Agrega Google Fonts en tu Content editor.
+
+```
+<?php  
+/* Add Google Fonts to the Admin editor */
+function add_google_fonts_admin_editor() {
+   $font_url = 'https://fonts.googleapis.com/css?family=Oswald:400,700';
+
+   //Encode Google Fonts URL if it contains commas
+   add_editor_style( esc_url( $font_url ) );
+}
+add_action( 'admin_init', 'add_google_fonts_admin_editor' );
+?>
+```
+
+## Agrega nuevas estilos en tu selector de estilos del TinyMCE
+
+```
+<?php  
+/* 
+ * Adding new TinyMCE styles to editor 
+ * https://codex.wordpress.org/TinyMCE_Custom_Styles
+ */
+
+// Callback function to insert 'styleselect' into the $buttons array
+function add_tiny_mce_buttons( $buttons ) {
+	array_unshift( $buttons, 'styleselect' );
+	return $buttons;
+}
+// Register our callback to the appropriate filter (2 means 2nd row)
+add_filter('mce_buttons_2', 'add_tiny_mce_buttons');
+
+// Callback function to filter the Tiny MCE settings
+function tiny_mce_add_styles( $init_array ) {  
+	// Define the style_formats array
+	$style_formats = array(  
+		// Each array child is a format with its own settings
+		array(  
+			'title' => 'Titulo Azul',  
+			'block' => 'div',  
+			'classes' => 'blue-title'
+		)
+ 	);  
+	// Insert the array, JSON ENCODED, into 'style_formats'
+	$init_array['style_formats'] = json_encode( $style_formats );  
+	
+	return $init_array;  
+} 
+add_filter('tiny_mce_before_init','tiny_mce_add_styles' ); 
+?>
+```
+
+## Agrega un nuevo Widget a tu Dashboard
+
+```
+<?php  
+//Add widget to dashboard page
+function add_movies_dashboard_widgets() {
+   wp_add_dashboard_widget('movies-widget', 'Recent Movies', 'movies_dashboard_widget');
+}
+add_action('wp_dashboard_setup', 'add_movies_dashboard_widgets');
+
+//Dashboard widget logic (can be anything!)
+function movies_dashboard_widget() {
+    $args = array ( 'post_type' => 'movies', 'posts_per_page' => 5 );
+    $movies = new WP_Query( $args );
+
+    if($movies->have_posts()) : 
+        while($movies->have_posts()): $movies->the_post();
+            echo '<div style="margin-bottom: 10px;">';
+            $url = home_url() . "/wp-admin/post.php?post=" . get_the_id() . '&action=edit';
+            echo '<a href="' . $url . '">' . get_the_title() . '</a> - ';
+            echo get_post_meta( get_the_id(), 'release-year' , true ) . '</div>'; 
+        endwhile;
+    endif;        
+}
+?>
+```
+
+## Agrega un enlace en tu Admin Bar
+
+```
+<?php   
+//Add Links to Admin Bar
+function movie_admin_bar_link( $wp_admin_bar ) {
+    //Only add link for Admins
+    if (current_user_can( 'manage_options' )) {
+	$args = array(
+	    'id'    => 'movies-page',
+	    'title' => 'Manage Movies',
+	    'href'  => home_url() . '/wp-admin/edit.php?post_type=movies',
+	    'meta'  => array( 'class' => 'movies-admin-link' )
+	);
+        $wp_admin_bar->add_node( $args );
+    }
+}
+add_action( 'admin_bar_menu', 'movie_admin_bar_link' );
+?>
+```
+
+## Agrega una página de Ayuda.
+
+```
+<?php    
+// Add a page to WP Menu
+function add_help_admin_pages() {
+    add_menu_page('Page Title', 'Menu Title', 'edit_posts', 
+        'unique-menu-slug', 'admin_help_page_function');
+} 
+add_action('admin_menu', 'add_help_admin_pages');
+
+//Define content for that page
+function admin_help_page_function() {
+    //Can be anything you want!
+}
+?>
+```
+
 # Creando Temas Personalizados.
 
 ## Presentación.
 
-- [custom-themes-managua2017.pdf](https://github.com/alexgordon25/wcmga2017/blob/master/presentacion/custom-themes-managua2017.pdf)
+- [custom-themes-managua2017.pdf](https://github.com/alexgordon25/wcmga2017/raw/master/presentacion/custom-themes-managua2017.pdf)
 
 ## Caso de Ejemplo.
 
@@ -11,7 +286,6 @@ Se requiere un sitio web con una sección principal de catálogo de Películas y
 PORTADA
 	- PELICULAS
 	- NOTICIAS
-
 
 ### Herramientas utilizadas.
 - [Tema base de Chocolita](https://github.com/monchitonet/Chocolita)
@@ -136,8 +410,7 @@ add_action( 'init', 'register_genre_taxonomy', 0 );
 ```
 Duplicar index.php con un nuevo nombre front-page.php y le agregamos un WP_Query en la parte de contenido.
 
-```
-<?php
+```php
 $peliculas = new WP_Query(array(
 	'post_type' => 'movie'
 ));
@@ -155,12 +428,10 @@ while ( $peliculas->have_posts() ) :
 <?php
 endwhile;
 wp_reset_postdata();
-?>
 ```
 Duplicar single.php con un nuevo nombre single-movie.php y le rendirizamos los custom fields en la parte de contenido.
 
-```
-<?php
+```php
 while ( have_posts() ) : the_post(); ?>
 
 	<article>
@@ -203,7 +474,6 @@ while ( have_posts() ) : the_post(); ?>
 	endif;
 
 endwhile; // End of the loop.
-?>
 ```
 
 

@@ -255,23 +255,6 @@ add_action( 'admin_bar_menu', 'movie_admin_bar_link' );
 ?>
 ```
 
-## Agrega una página de Ayuda.
-
-```
-<?php    
-// Add a page to WP Menu
-function add_help_admin_pages() {
-    add_menu_page('Page Title', 'Menu Title', 'edit_posts', 
-        'unique-menu-slug', 'admin_help_page_function');
-} 
-add_action('admin_menu', 'add_help_admin_pages');
-
-//Define content for that page
-function admin_help_page_function() {
-    //Can be anything you want!
-}
-?>
-```
 
 # Creando Temas Personalizados.
 
